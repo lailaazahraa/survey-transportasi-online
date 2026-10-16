@@ -80,8 +80,11 @@ var $=function(s){return document.querySelector(s)},M=$('#m'),st,cur='home',arg;
 function E(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
 function seed(){var q=[];D.forEach(function(a){a[1].forEach(function(t){q.push({t:t,type:'likert',g:a[0]})})});q.push({t:'Kritik dan saran untuk peningkatan layanan',type:'text',g:'Kritik dan Saran'});
  return{id:'s1',title:'Evaluasi Layanan Transportasi Online Melalui Aspek Tarif, Keamanan dan Kecepatan',desc:'Survei kepuasan pengguna terhadap tarif, keselamatan, dan kecepatan layanan transportasi online. Jawaban dipakai hanya untuk kepentingan akademik.',qs:q}}
-function load(){var sv=null;try{sv=JSON.parse(localStorage.getItem('sf2'))}catch(e){}
- if(sv){st={s:[seed()].concat(sv.s),r:sv.r}}else{st={s:[seed()],r:{s1:RAW.map(function(x){return x.split('').map(Number).concat([''])})}}}}
+function load(){var sv=null,sr=RAW.map(function(x){return x.split('').map(Number).concat([''])});
+ try{sv=JSON.parse(localStorage.getItem('sf2'))}catch(e){}
+ st={s:[seed()],r:{s1:sr}};
+ if(sv&&Array.isArray(sv.s)){st.s=st.s.concat(sv.s.filter(function(x){return x&&x.id&&Array.isArray(x.qs)}));var r=sv.r||{};for(var k in r){if(Array.isArray(r[k])&&(k!='s1'||r[k].length))st.r[k]=r[k]}}
+ st.s.forEach(function(x){if(!st.r[x.id])st.r[x.id]=[]})}
 function save(){try{localStorage.setItem('sf2',JSON.stringify({s:st.s.slice(1),r:st.r}))}catch(e){}}
 function col(sv,j){return st.r[sv.id].map(function(r){return r[j]})}
 function nm(sv,j){return col(sv,j).map(Number).filter(function(x){return x})}
@@ -93,7 +96,7 @@ function go(v,id){cur=v;arg=id;render();window.scrollTo(0,0)}
 function render(){document.querySelectorAll('.nv[data-go]').forEach(function(b){b.classList.toggle('on',b.dataset.go==cur)});({home:home,new:nw,fill:fill,res:res})[cur]()}
 function home(){var n=0,c=csi(st.s[0]);st.s.forEach(function(s){n+=st.r[s.id].length});
  var h='<div class="card hero"><span class="tg">PLATFORM SURVEI ALL-IN-ONE</span><h1>Buat survei, kumpulkan jawaban, baca hasilnya.</h1><p>Susun kuesioner dengan berbagai tipe pertanyaan, bagikan ke responden, lalu lihat statistik Mean, Median, dan SD serta indeks kepuasan secara otomatis.</p><p style="margin-top:18px"><button class="btn w" data-go="new">Buat Survei Baru</button> <button class="btn" style="background:rgba(255,255,255,.2)" data-go="res" data-id="s1">Lihat Hasil</button></p></div>';
- h+='<div class="st"><div class="card"><b>'+st.s.length+'</b><span>Total survei</span></div><div class="card"><b>'+n+'</b><span>Total responden</span></div><div class="card"><b>4</b><span>Tipe pertanyaan</span></div><div class="card"><b>'+c.toFixed(1)+'%</b><span>CSI survei utama</span></div></div>';
+ h+='<div class="st"><div class="card"><b>'+st.s.length+'</b><span>Total survei</span></div><div class="card"><b>'+n+'</b><span>Total responden</span></div><div class="card"><b>4</b><span>Tipe pertanyaan</span></div><div class="card"><b>'+(c==null?'-':c.toFixed(1)+'%')+'</b><span>CSI survei utama</span></div></div>';
  h+='<div class="card"><h3 style="margin-bottom:8px">Survei Saya</h3><table><tr><th>Judul</th><th>Pertanyaan</th><th>Responden</th><th>Aksi</th></tr>';
  st.s.forEach(function(s,i){h+='<tr><td><b>'+E(s.title)+'</b></td><td>'+s.qs.length+'</td><td>'+st.r[s.id].length+'</td><td><button class="btn s" data-go="fill" data-id="'+s.id+'">Isi</button> <button class="btn s g" data-go="res" data-id="'+s.id+'">Hasil</button>'+(i?' <button class="btn s g" data-del="'+s.id+'">Hapus</button>':'')+'</td></tr>'});
  M.innerHTML=h+'</table></div>'}
@@ -120,7 +123,8 @@ function res(){var s=sv_(arg),n=st.r[s.id].length,c=csi(s),h='<div class="hd"><d
  var all=[];s.qs.forEach(function(q,j){if(q.type=='likert')all=all.concat(nm(s,j))});var S=stat(all);
  h+='<div class="st"><div class="card"><b>'+n+'</b><span>Responden</span></div><div class="card"><b>'+(S?S.m.toFixed(2):'-')+'</b><span>Rata-rata skor (1-5)</span></div><div class="card"><b>'+(S?S.md:'-')+'</b><span>Median</span></div><div class="card"><b>'+(c==null?'-':c.toFixed(1)+'%')+'</b><span>Indeks kepuasan (CSI)</span></div></div>';
  var gs={},go_=[];s.qs.forEach(function(q,j){if(q.type=='likert'){if(!gs[q.g]){gs[q.g]=[];go_.push(q.g)}gs[q.g]=gs[q.g].concat(nm(s,j))}});
- if(go_.length){h+='<div class="card"><h3 style="margin-bottom:6px">Indeks Kepuasan per Aspek</h3>';go_.forEach(function(g){var m=stat(gs[g]).m;h+='<div class="ar"><span>'+E(g)+'</span><div class="bar"><i style="width:'+m/5*100+'%"></i></div><b>'+(m/5*100).toFixed(1)+'%</b></div>'});h+='</div>'}
+ if(!n)h+='<div class="card"><p class="note" style="margin:0">Belum ada responden. Klik <b>Isi Survei</b> pada dashboard untuk mengisi survei ini terlebih dahulu.</p></div>';
+ if(go_.length&&n){h+='<div class="card"><h3 style="margin-bottom:6px">Indeks Kepuasan per Aspek</h3>';go_.forEach(function(g){var z=stat(gs[g]);if(!z)return;var m=z.m;h+='<div class="ar"><span>'+E(g)+'</span><div class="bar"><i style="width:'+m/5*100+'%"></i></div><b>'+(m/5*100).toFixed(1)+'%</b></div>'});h+='</div>'}
  h+='<div class="card"><h3 style="margin-bottom:6px">Statistik per Pertanyaan</h3><table><tr><th>Pertanyaan</th><th>Mean</th><th>Median</th><th>SD</th><th>Sebaran jawaban</th></tr>';
  s.qs.forEach(function(q,j){var a=nm(s,j);
   if(q.type=='likert'&&a.length){var z=stat(a);h+='<tr><td>'+E(q.t)+'</td><td>'+z.m.toFixed(2)+'</td><td>'+z.md+'</td><td>'+z.sd.toFixed(2)+'</td><td>'+sbar(a)+'</td></tr>'}
@@ -136,9 +140,9 @@ document.addEventListener('click',function(e){var t=e.target.closest('[data-go]'
  t=e.target.closest('[data-ex]');if(t)exp(t.dataset.ex)});
 document.addEventListener('change',function(e){var it=e.target.closest('.it');if(it)it.classList.remove('miss')});
 $('#mz').onclick=function(){$('#md').classList.remove('on')};
-$('#mc').onclick=function(){try{navigator.clipboard.writeText($('#mx').value);$('#mc').textContent='Tersalin'}catch(e){$('#mx').select()}};
+$('#mc').onclick=function(){$('#mx').select();try{document.execCommand('copy');$('#mc').textContent='Tersalin'}catch(e){}};
 $('#th').onclick=function(){var r=document.documentElement,d=r.getAttribute('data-theme')=='dark'||(!r.getAttribute('data-theme')&&matchMedia('(prefers-color-scheme:dark)').matches);r.setAttribute('data-theme',d?'light':'dark')};
-load();render();
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){load();render()});else{load();render()}
 </script>
 </body>
 </html>
