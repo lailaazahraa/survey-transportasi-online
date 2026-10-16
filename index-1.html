@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Survei Evaluasi Layanan Transportasi Online</title>
+<style>
+  :root{--bg:#f6f1e7;--card:#fff;--ink:#2b2b2b;--accent:#8e3b5a;--accent2:#dec38e;--muted:#777}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5}
+  header{background:var(--accent);color:#fff;padding:28px 16px;text-align:center}
+  header h1{margin:0 0 6px;font-size:1.35rem}
+  header p{margin:0;opacity:.9;font-size:.9rem}
+  main{max-width:760px;margin:0 auto;padding:16px}
+  .card{background:var(--card);border-radius:12px;padding:18px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+  .card h2{margin:0 0 4px;font-size:1.1rem;color:var(--accent)}
+  .hint{font-size:.85rem;color:var(--muted);margin:0 0 12px}
+  label.f{display:block;font-weight:600;margin:12px 0 4px}
+  input[type=text],input[type=number],select,textarea{width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;font:inherit}
+  .q{padding:12px 0;border-top:1px solid #eee}
+  .q:first-of-type{border-top:0}
+  .q p{margin:0 0 8px}
+  .scale{display:flex;gap:6px}
+  .scale label{flex:1;text-align:center;border:1px solid #ccc;border-radius:8px;padding:8px 0;cursor:pointer;font-weight:600}
+  .scale input{display:none}
+  .scale input:checked+span{color:#fff}
+  .scale label:has(input:checked){background:var(--accent);border-color:var(--accent);color:#fff}
+  .legend{display:flex;justify-content:space-between;font-size:.72rem;color:var(--muted);margin-top:4px}
+  button{background:var(--accent);color:#fff;border:0;border-radius:8px;padding:12px 20px;font:inherit;font-weight:600;cursor:pointer}
+  button.alt{background:#fff;color:var(--accent);border:1px solid var(--accent)}
+  .actions{display:flex;gap:8px;flex-wrap:wrap}
+  .err{color:#b00020;font-size:.85rem;display:none;margin-top:8px}
+  table{width:100%;border-collapse:collapse;font-size:.88rem}
+  th,td{padding:8px;border-bottom:1px solid #eee;text-align:left}
+  .bar{height:10px;background:#eee;border-radius:5px;overflow:hidden}
+  .bar>div{height:100%;background:var(--accent)}
+  .hidden{display:none}
+</style>
+</head>
+<body>
+<header>
+  <h1>Evaluasi Layanan Transportasi Online</h1>
+  <p>Aspek Tarif, Keamanan, dan Kecepatan</p>
+</header>
+<main>
+
+<div id="view-form">
+  <div class="card">
+    <p style="margin:0">Survei ini merangkum pengalaman pengguna transportasi berbasis aplikasi. Data hanya dipakai untuk kepentingan akademik. Isi dengan skala <b>1 sampai 5</b>:
+    1 = Sangat Tidak Setuju, 2 = Tidak Setuju, 3 = Netral, 4 = Setuju, 5 = Sangat Setuju.</p>
+  </div>
+
+  <form id="form" novalidate>
+    <div class="card">
+      <h2>Data Responden</h2>
+      <label class="f" for="nama">Nama (boleh inisial)</label>
+      <input type="text" id="nama" required>
+      <label class="f" for="usia">Usia</label>
+      <input type="number" id="usia" min="10" max="99" required>
+      <label class="f" for="aplikasi">Aplikasi yang paling sering dipakai</label>
+      <select id="aplikasi" required>
+        <option value="">Pilih...</option>
+        <option>Gojek</option><option>Grab</option><option>Maxim</option><option>inDrive</option><option>Lainnya</option>
+      </select>
+      <label class="f" for="frekuensi">Frekuensi pemakaian</label>
+      <select id="frekuensi" required>
+        <option value="">Pilih...</option>
+        <option>Hampir setiap hari</option><option>Beberapa kali seminggu</option><option>Beberapa kali sebulan</option><option>Jarang</option>
+      </select>
+    </div>
+
+    <div id="sections"></div>
+
+    <div class="card">
+      <h2>Saran</h2>
+      <label class="f" for="saran">Saran untuk perbaikan layanan (opsional)</label>
+      <textarea id="saran" rows="3"></textarea>
+    </div>
+
+    <p class="err" id="err">Mohon lengkapi semua data responden dan seluruh pernyataan.</p>
+    <div class="actions">
+      <button type="submit">Kirim Jawaban</button>
+      <button type="button" class="alt" id="btn-lihat">Lihat Hasil</button>
+    </div>
+  </form>
+</div>
+
+<div id="view-result" class="hidden">
+  <div class="card">
+    <h2>Hasil Survei</h2>
+    <p class="hint" id="jumlah"></p>
+    <table id="tbl-aspek"></table>
+  </div>
+  <div class="card">
+    <h2>Rata-rata per Pernyataan</h2>
+    <table id="tbl-item"></table>
+  </div>
+  <div class="actions">
+    <button id="btn-csv">Unduh CSV</button>
+    <button class="alt" id="btn-kembali">Kembali ke Survei</button>
+    <button class="alt" id="btn-hapus">Hapus Semua Data</button>
+  </div>
+</div>
+
+</main>
+
+<script>
+// ===== Daftar pernyataan: ganti/samakan dengan Google Form kamu =====
+const ASPEK = [
+  { kode:"T", nama:"Tarif", item:[
+    "Tarif layanan transportasi online sesuai dengan jarak tempuh.",
+    "Tarif yang ditampilkan di aplikasi sama dengan yang saya bayar.",
+    "Harga yang ditawarkan bersaing dibanding transportasi lain.",
+    "Biaya tambahan (jam sibuk, hujan) masih dapat diterima."
+  ]},
+  { kode:"K", nama:"Keamanan", item:[
+    "Saya merasa aman selama perjalanan menggunakan transportasi online.",
+    "Identitas pengemudi dan kendaraan di aplikasi sesuai kenyataan.",
+    "Pengemudi mematuhi aturan lalu lintas selama perjalanan.",
+    "Fitur keselamatan di aplikasi (berbagi perjalanan, tombol darurat) membantu saya."
+  ]},
+  { kode:"C", nama:"Kecepatan", item:[
+    "Waktu tunggu mendapatkan pengemudi tergolong singkat.",
+    "Pengemudi tiba di titik jemput sesuai estimasi.",
+    "Waktu perjalanan sesuai dengan estimasi di aplikasi.",
+    "Rute yang dipilih pengemudi efisien."
+  ]}
+];
+const KEY = "survei_transportasi_online";
+const $ = s => document.querySelector(s);
+const load = () => { try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch(e){ return []; } };
+const save = d => { try { localStorage.setItem(KEY, JSON.stringify(d)); } catch(e){} };
+
+// Render pernyataan
+$("#sections").innerHTML = ASPEK.map((a,ai)=>`
+  <div class="card">
+    <h2>${String.fromCharCode(65+ai)}. Aspek ${a.nama}</h2>
+    <p class="hint">1 = Sangat Tidak Setuju &nbsp;•&nbsp; 5 = Sangat Setuju</p>
+    ${a.item.map((t,i)=>`
+      <div class="q"><p>${i+1}. ${t}</p>
+        <div class="scale">${[1,2,3,4,5].map(n=>`<label><input type="radio" name="${a.kode}${i}" value="${n}">${n}</label>`).join("")}</div>
+        <div class="legend"><span>Sangat tidak setuju</span><span>Sangat setuju</span></div>
+      </div>`).join("")}
+  </div>`).join("");
+
+$("#form").addEventListener("submit", e=>{
+  e.preventDefault();
+  const r = { waktu:new Date().toISOString(), nama:$("#nama").value.trim(), usia:$("#usia").value,
+    aplikasi:$("#aplikasi").value, frekuensi:$("#frekuensi").value, saran:$("#saran").value.trim() };
+  let ok = r.nama && r.usia && r.aplikasi && r.frekuensi;
+  ASPEK.forEach(a=>a.item.forEach((_,i)=>{
+    const v = document.querySelector(`input[name="${a.kode}${i}"]:checked`);
+    if(!v) ok=false; else r[a.kode+(i+1)] = +v.value;
+  }));
+  $("#err").style.display = ok ? "none":"block";
+  if(!ok) return;
+  const d = load(); d.push(r); save(d);
+  $("#form").reset();
+  alert("Terima kasih! Jawabanmu sudah tersimpan.");
+  tampilHasil();
+});
+
+function rata(arr){ return arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0; }
+function tampilHasil(){
+  const d = load();
+  $("#view-form").classList.add("hidden"); $("#view-result").classList.remove("hidden");
+  $("#jumlah").textContent = `Jumlah responden: ${d.length}`;
+  $("#tbl-aspek").innerHTML = "<tr><th>Aspek</th><th>Rata-rata</th><th></th></tr>" + ASPEK.map(a=>{
+    const vals = d.flatMap(r=>a.item.map((_,i)=>r[a.kode+(i+1)]));
+    const m = rata(vals);
+    return `<tr><td>${a.nama}</td><td>${m.toFixed(2)}</td><td style="width:40%"><div class="bar"><div style="width:${m/5*100}%"></div></div></td></tr>`;
+  }).join("");
+  $("#tbl-item").innerHTML = "<tr><th>Pernyataan</th><th>Rata-rata</th></tr>" + ASPEK.flatMap(a=>a.item.map((t,i)=>{
+    const m = rata(d.map(r=>r[a.kode+(i+1)]));
+    return `<tr><td>${a.kode}${i+1}. ${t}</td><td>${m.toFixed(2)}</td></tr>`;
+  })).join("");
+}
+$("#btn-lihat").onclick = tampilHasil;
+$("#btn-kembali").onclick = ()=>{ $("#view-result").classList.add("hidden"); $("#view-form").classList.remove("hidden"); };
+$("#btn-hapus").onclick = ()=>{ if(confirm("Hapus semua data di browser ini?")){ save([]); tampilHasil(); } };
+$("#btn-csv").onclick = ()=>{
+  const d = load();
+  const cols = ["waktu","nama","usia","aplikasi","frekuensi",...ASPEK.flatMap(a=>a.item.map((_,i)=>a.kode+(i+1))),"saran"];
+  const esc = v => '"'+String(v??"").replace(/"/g,'""')+'"';
+  const csv = [cols.join(","),...d.map(r=>cols.map(c=>esc(r[c])).join(","))].join("\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob(["\ufeff"+csv],{type:"text/csv"}));
+  a.download = "hasil-survei.csv"; a.click();
+};
+</script>
+</body>
+</html>
